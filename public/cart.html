@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cart / Checkout • Cheesy Comet Pizzeria</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <div class="brand">☄️🧀 Cheesy Comet Pizzeria</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/customize.html">Customize</a>
+      <a href="/cart.html">Cart / Checkout</a>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: CART -->
+    <div class="card">
+      <h2>🛒 Your Cart</h2>
+      <p class="muted">Review your items, remove what you don’t want, or clear the cart.</p>
+
+      <div class="kv"><span>Items</span><b id="cartItems">…</b></div>
+      <div class="kv"><span>Subtotal</span><b id="cartSubtotal">…</b></div>
+      <div class="kv"><span>Tax</span><b id="cartTax">…</b></div>
+      <div class="kv"><span>Total</span><b id="cartTotal">…</b></div>
+
+      <hr style="border-color: rgba(255,255,255,.12); margin: 16px 0;"/>
+
+      <div id="cartList" class="items"></div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top: 12px;">
+        <button class="btn" id="refreshCartBtn">Refresh</button>
+        <button class="btn danger" id="clearCartBtn">Clear cart</button>
+      </div>
+
+      <p class="muted" id="cartMsg"></p>
+    </div>
+
+    <!-- RIGHT: NEXT STEP -->
+    <div class="card">
+      <h2>✅ Checkout</h2>
+      <p class="muted">
+        
+      </p>
+      <a class="btn primary" href="/checkout.html">Go to checkout</a>
+      <p class="muted" style="margin-top:10px;"></p>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let cartId = null;
+const $ = (id) => document.getElementById(id);
+
+function renderLineItem(it, index) {
+  const name = it.kind === "drink"
+    ? `🥤 ${String(it.drink || "").replaceAll("_"," ")}`
+    : `🍕 ${String(it.name || "Pizza")}`;
+
+  const detail = it.kind === "pizza"
+    ? [
+        it.customization?.size,
+        it.customization?.crust?.replaceAll("_"," "),
+        it.customization?.sauce,
+        it.customization?.cheese,
+        (it.customization?.toppings || []).join(", ").replaceAll("_"," ")
+      ].filter(Boolean).join(" • ")
+    : "";
+
+  return `
+    <div class="item">
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px;">
+          <b>${name}</b>
+          ${detail ? `<div class="muted">${detail}</div>` : ""}
+          <div class="muted">Qty: ${it.qty ?? 1}</div>
+          <div class="muted">Unit: ${dollars(it.unit_price ?? 0)} • Item Total: <b>${dollars(it.line_total ?? ((it.unit_price ?? 0) * (it.qty ?? 1)))}</b></div>
+        </div>
+        <button class="btn bad" data-remove-index="${index}">Remove</button>
+      </div>
+    </div>
+  `;
+}
+
+async function loadCart() {
+  const data = await API.getCart(cartId);
+  const items = data.cart?.items || [];
+  const totals = data.totals || {};
+
+  $("cartItems").textContent = items.reduce((a, it) => a + (it.qty ?? 1), 0);
+  $("cartSubtotal").textContent = dollars(totals.subtotal ?? 0);
+  $("cartTax").textContent = dollars(totals.tax ?? 0);
+  $("cartTotal").textContent = dollars(totals.total ?? 0);
+
+  const host = $("cartList");
+  host.innerHTML = items.length
+    ? items.map(renderLineItem).join("")
+    : `<p class="muted">Your cart is empty.</p>`;
+
+  host.querySelectorAll("button[data-remove-index]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const index = Number(btn.getAttribute("data-remove-index"));
+      try {
+        await API.removeItem(cartId, index);
+        await loadCart();
+      } catch (e) {
+        console.error(e);
+        $("cartMsg").textContent = String(e?.message || e);
+      }
+    });
+  });
+}
+
+(async () => {
+  cartId = await ensureCart();
+
+  // ✅ FIXED: correct Clear Cart button ID
+  $("clearCartBtn").addEventListener("click", async () => {
+    $("cartMsg").textContent = "";
+    try {
+      await API.clearCart(cartId);
+      await loadCart();
+    } catch (e) {
+      console.error(e);
+      $("cartMsg").textContent = String(e?.message || e);
+    }
+  });
+
+  // ✅ Refresh button wired
+  $("refreshCartBtn").addEventListener("click", async () => {
+    $("cartMsg").textContent = "";
+    try {
+      await loadCart();
+    } catch (e) {
+      console.error(e);
+      $("cartMsg").textContent = String(e?.message || e);
+    }
+  });
+
+  await loadCart();
+})();
+</script>
+</body>
+</html>

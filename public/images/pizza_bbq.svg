@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+<rect width="600" height="400" rx="24" fill="#111a2e"/>
+<circle cx="300" cy="200" r="145" fill="#f2b55b"/>
+<circle cx="300" cy="200" r="125" fill="#f8d07a"/>
+<circle cx="300" cy="200" r="112" fill="#b04a2f" opacity="0.88"/>
+<text x="24" y="52" fill="#e8eefc" font-family="Arial" font-size="28" font-weight="700">Orbit BBQ</text>
+<circle cx="260" cy="165" r="18" fill="#f1c40f" opacity="0.9"/>
+<circle cx="345" cy="160" r="18" fill="#f1c40f" opacity="0.9"/>
+<circle cx="355" cy="235" r="18" fill="#f1c40f" opacity="0.9"/>
+<circle cx="275" cy="245" r="18" fill="#f1c40f" opacity="0.9"/>
+<circle cx="240" cy="225" r="18" fill="#f1c40f" opacity="0.9"/>
+<circle cx="315" cy="210" r="18" fill="#f1c40f" opacity="0.9"/>
+<circle cx="300" cy="185" r="22" fill="#d35400" opacity="0.75"/>
+</svg>

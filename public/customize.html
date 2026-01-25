@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Customize • Cheesy Comet Pizzeria</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <div class="brand">☄️🧀 Cheesy Comet Pizzeria</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/customize.html">Customize</a>
+      <a href="/cart.html">Cart / Checkout</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>🍕 Customize your pizza</h2>
+      <p class="muted" id="priceHint">Loading menu…</p>
+
+      <label>Size</label>
+      <select id="size"></select>
+
+      <label>Crust</label>
+      <select id="crust"></select>
+
+      <label>Sauce</label>
+      <select id="sauce">
+        <option value="tomato">Tomato</option>
+        <option value="alfredo">Alfredo</option>
+        <option value="bbq">BBQ</option>
+        <option value="pesto">Pesto</option>
+      </select>
+
+      <label>Cheese</label>
+      <select id="cheese"></select>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; margin-top: 6px;">
+        <div>
+          <label>Bake level</label>
+          <select id="bake">
+            <option value="normal">Normal</option>
+            <option value="well_done">Well done</option>
+            <option value="light_bake">Light bake</option>
+          </select>
+        </div>
+        <div>
+          <label>Cut style</label>
+          <select id="cut">
+            <option value="pie">Pie slices</option>
+            <option value="square">Square cut</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; margin-top: 0;">
+        <div>
+          <label>Crust flavor</label>
+          <select id="crustFlavor"></select>
+        </div>
+        <div>
+          <label>Drizzle</label>
+          <select id="drizzle"></select>
+        </div>
+      </div>
+
+      <label>Toppings (choose up to 8)</label>
+      <div id="toppingsBox" class="toppings-box"></div>
+      <p class="muted" id="toppingHelp">0 / 8 selected</p>
+
+      <label>Special instructions</label>
+      <textarea id="instructions" placeholder="e.g., well-done, cut in squares…"></textarea>
+
+      <div class="row">
+        <div>
+          <label>Qty</label>
+          <input id="pizzaQty" type="number" min="1" max="20" value="1"/>
+        </div>
+        <div>
+          <button class="btn primary" id="addPizzaBtn" type="button">Add pizza</button>
+        </div>
+      </div>
+
+      <p class="muted" id="pizzaMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2>⭐ Featured Comets</h2>
+      <p class="muted">Add a preset to your cart instantly, or load it into the builder to tweak it first.</p>
+
+      <div class="items" id="presetList"></div>
+
+      <hr style="border-color: rgba(255,255,255,.12); margin: 16px 0;"/>
+
+      <h2>🥤 Add a drink</h2>
+
+      <label>Drink</label>
+      <select id="drink"></select>
+
+      <div class="row">
+        <div>
+          <label>Qty</label>
+          <input id="drinkQty" type="number" min="1" max="20" value="1"/>
+        </div>
+        <div>
+          <button class="btn" id="addDrinkBtn" type="button">Add drink</button>
+        </div>
+      </div>
+
+      <p class="muted" id="drinkMsg"></p>
+
+      <hr style="border-color: rgba(255,255,255,.12); margin: 16px 0;"/>
+
+      <h2>🛒 Cart glance</h2>
+      <div class="kv"><span>Items</span><b id="cartItems">…</b></div>
+      <div class="kv"><span>Total</span><b id="cartTotal">…</b></div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top: 10px;">
+        <a class="btn good" href="/cart.html">Go to cart / checkout</a>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+      </div>
+
+      <p class="muted" id="miniMsg"></p>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let menu = null;
+let cartId = null;
+
+const TOPPING_MAX = 8;
+
+const PRESETS = [
+  {
+    key: "comet_classic",
+    name: "Comet Classic",
+    desc: "Tomato • normal cheese • pepperoni",
+    customization: {
+      size: "medium",
+      crust: "hand_tossed",
+      sauce: "tomato",
+      cheese: "normal",
+      toppings: ["pepperoni"],
+      bake: "normal",
+      cut: "pie",
+      crust_flavor: "none",
+      drizzle: "none",
+      instructions: ""
+    }
+  },
+  {
+    key: "supernova_veggie",
+    name: "Supernova Veggie",
+    desc: "Tomato • extra cheese • mushrooms, onions, green peppers, olives",
+    customization: {
+      size: "medium",
+      crust: "hand_tossed",
+      sauce: "tomato",
+      cheese: "extra",
+      toppings: ["mushrooms", "onions", "green_peppers", "black_olives"],
+      bake: "normal",
+      cut: "pie",
+      crust_flavor: "none",
+      drizzle: "none",
+      instructions: ""
+    }
+  },
+  {
+    key: "orbit_bbq",
+    name: "Orbit BBQ",
+    desc: "BBQ • normal cheese • onions, jalapeños",
+    customization: {
+      size: "medium",
+      crust: "hand_tossed",
+      sauce: "bbq",
+      cheese: "normal",
+      toppings: ["onions", "jalapenos"],
+      bake: "normal",
+      cut: "pie",
+      crust_flavor: "garlic_butter",
+      drizzle: "hot_honey",
+      instructions: ""
+    }
+  }
+];
+
+const $ = (id) => document.getElementById(id);
+
+function fillSelect(sel, items, labelFn, valueFn) {
+  sel.innerHTML = "";
+  for (const x of items) {
+    const o = document.createElement("option");
+    o.value = valueFn ? valueFn(x) : x;
+    o.textContent = labelFn ? labelFn(x) : x;
+    sel.appendChild(o);
+  }
+}
+
+function renderToppingCheckboxes(toppings) {
+  const host = $("toppingsBox");
+  const help = $("toppingHelp");
+  host.innerHTML = "";
+
+  function updateLimit() {
+    const checked = host.querySelectorAll("input[type='checkbox']:checked").length;
+    help.textContent = `${checked} / ${TOPPING_MAX} selected`;
+
+    const disableOthers = checked >= TOPPING_MAX;
+    host.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+      if (!cb.checked) cb.disabled = disableOthers;
+    });
+  }
+
+  for (const t of (toppings || [])) {
+    const row = document.createElement("label");
+    row.className = "topping-item";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = t;
+    cb.addEventListener("change", updateLimit);
+
+    const text = document.createElement("span");
+    text.textContent = t.replaceAll("_", " ");
+
+    row.appendChild(cb);
+    row.appendChild(text);
+    host.appendChild(row);
+  }
+
+  updateLimit();
+}
+
+function getSelectedToppings() {
+  return Array.from($("toppingsBox").querySelectorAll("input[type='checkbox']:checked"))
+    .map((cb) => cb.value);
+}
+
+function setToppingsChecked(values) {
+  const host = $("toppingsBox");
+  const set = new Set(values || []);
+  host.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+    cb.checked = set.has(cb.value);
+  });
+
+  const checked = host.querySelectorAll("input[type='checkbox']:checked").length;
+  $("toppingHelp").textContent = `${checked} / ${TOPPING_MAX} selected`;
+
+  const disableOthers = checked >= TOPPING_MAX;
+  host.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+    if (!cb.checked) cb.disabled = disableOthers;
+  });
+}
+
+async function refreshMiniCart() {
+  const data = await API.getCart(cartId);
+  $("cartItems").textContent = data.cart.items.length;
+  $("cartTotal").textContent = dollars(data.totals.total);
+}
+
+function renderPresets() {
+  const host = $("presetList");
+  host.innerHTML = PRESETS.map((p) => {
+    return `
+      <div class="item">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          <div style="min-width:220px; flex:1;">
+            <b>${p.name}</b>
+            <div class="muted">${p.desc}</div>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" data-action="load" data-key="${p.key}" type="button">Load into builder</button>
+            <button class="btn primary" data-action="add" data-key="${p.key}" type="button">Add to cart</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  host.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+
+    const key = btn.getAttribute("data-key");
+    const action = btn.getAttribute("data-action");
+    const preset = PRESETS.find((x) => x.key === key);
+    if (!preset) return;
+
+    if (action === "load") {
+      applyPresetToBuilder(preset.customization);
+      $("miniMsg").textContent = `Loaded "${preset.name}" into the builder.`;
+      return;
+    }
+
+    if (action === "add") {
+      await addPresetToCart(preset);
+    }
+  });
+}
+
+function applyPresetToBuilder(custom) {
+  $("size").value = custom.size;
+  $("crust").value = custom.crust;
+  $("sauce").value = custom.sauce;
+  $("cheese").value = custom.cheese;
+  $("bake").value = custom.bake || "normal";
+  $("cut").value = custom.cut || "pie";
+  $("crustFlavor").value = custom.crust_flavor || "none";
+  $("drizzle").value = custom.drizzle || "none";
+  setToppingsChecked(custom.toppings);
+  $("instructions").value = custom.instructions || "";
+  $("pizzaQty").value = 1;
+}
+
+async function addPresetToCart(preset) {
+  const body = {
+    kind: "pizza",
+    name: preset.name,
+    qty: 1,
+    customization: preset.customization
+  };
+
+  const resp = await API.addPizza(cartId, body);
+  $("miniMsg").textContent = `Added "${preset.name}" to your cart. Total is now ${dollars(resp.totals.total)}.`;
+  await refreshMiniCart();
+}
+
+(async () => {
+  cartId = await ensureCart();
+  menu = await API.menu();
+
+  fillSelect(
+    $("size"),
+    Object.keys(menu.prices.size),
+    (s) => `${s} (${dollars(menu.prices.size[s])})`,
+    (s) => s
+  );
+  $("size").value = "medium";
+
+  fillSelect(
+    $("crust"),
+    Object.keys(menu.prices.crust),
+    (c) => {
+      const extra = menu.prices.crust[c];
+      if (extra === 0) return c.replaceAll("_", " ");
+      return `${c.replaceAll("_", " ")} (+${dollars(extra)})`;
+    },
+    (c) => c
+  );
+
+  fillSelect(
+    $("cheese"),
+    Object.keys(menu.prices.cheese),
+    (ch) => {
+      const extra = menu.prices.cheese[ch];
+      if (extra === 0) return ch;
+      return extra > 0 ? `${ch} (+${dollars(extra)})` : `${ch} (${dollars(extra)})`;
+    },
+    (ch) => ch
+  );
+
+  fillSelect(
+    $("crustFlavor"),
+    Object.keys(menu.prices.crust_flavor),
+    (f) => {
+      const extra = menu.prices.crust_flavor[f];
+      if (extra === 0) return f.replaceAll("_", " ");
+      return `${f.replaceAll("_", " ")} (+${dollars(extra)})`;
+    },
+    (f) => f
+  );
+
+  fillSelect(
+    $("drizzle"),
+    Object.keys(menu.prices.drizzle),
+    (d) => {
+      const extra = menu.prices.drizzle[d];
+      if (extra === 0) return d.replaceAll("_", " ");
+      return `${d.replaceAll("_", " ")} (+${dollars(extra)})`;
+    },
+    (d) => d
+  );
+
+  // Show the full menu toppings list from the API
+  renderToppingCheckboxes(menu.toppings);
+
+  const drinks = Object.keys(menu.prices.drink).filter((d) => d !== "none");
+  fillSelect(
+    $("drink"),
+    drinks,
+    (d) => `${d.replaceAll("_", " ")} (${dollars(menu.prices.drink[d])})`,
+    (d) => d
+  );
+
+  $("priceHint").textContent =
+    `Toppings: ${dollars(menu.prices.topping_each)} each • Tax rate: ${(menu.prices.tax_rate * 100).toFixed(2)}%`;
+
+  $("addPizzaBtn").addEventListener("click", async () => {
+    $("pizzaMsg").textContent = "";
+    try {
+      const body = {
+        kind: "pizza",
+        name: "Custom Pizza",
+        qty: parseInt($("pizzaQty").value, 10),
+        customization: {
+          size: $("size").value,
+          crust: $("crust").value,
+          sauce: $("sauce").value,
+          cheese: $("cheese").value,
+          bake: $("bake").value,
+          cut: $("cut").value,
+          crust_flavor: $("crustFlavor").value,
+          drizzle: $("drizzle").value,
+          toppings: getSelectedToppings(),
+          instructions: $("instructions").value || ""
+        }
+      };
+
+      const resp = await API.addPizza(cartId, body);
+      $("pizzaMsg").textContent = `Added! Cart total is now ${dollars(resp.totals.total)}.`;
+      await refreshMiniCart();
+    } catch (e) {
+      console.error(e);
+      $("pizzaMsg").textContent = String(e?.message || e);
+    }
+  });
+
+  $("addDrinkBtn").addEventListener("click", async () => {
+    $("drinkMsg").textContent = "";
+    try {
+      const body = {
+        kind: "drink",
+        drink: $("drink").value,
+        qty: parseInt($("drinkQty").value, 10)
+      };
+
+      const resp = await API.addDrink(cartId, body);
+      $("drinkMsg").textContent = `Added! Cart total is now ${dollars(resp.totals.total)}.`;
+      await refreshMiniCart();
+    } catch (e) {
+      console.error(e);
+      $("drinkMsg").textContent = String(e?.message || e);
+    }
+  });
+
+  $("refreshBtn").addEventListener("click", refreshMiniCart);
+
+  renderPresets();
+  await refreshMiniCart();
+})();
+</script>
+</body>
+</html>

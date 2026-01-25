@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Checkout • Cheesy Comet Pizzeria</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+  <div class="brand">☄️🧀 Cheesy Comet Pizzeria</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/customize.html">Customize</a>
+    <a href="/cart.html">Cart / Checkout</a>
+  </div>
+</div>
+
+
+  <div class="grid">
+
+    <!-- LEFT: CUSTOMER INFO -->
+    <div class="card">
+      <h2>✅ Checkout</h2>
+      <p class="muted">Enter your info and place your order.</p>
+
+      <h3 style="margin-top:14px;">Customer info</h3>
+
+      <label>Full name</label>
+      <input id="fullName" placeholder="e.g., First name Last name"/>
+
+      <label>Email</label>
+      <input id="email" placeholder="e.g., you@example.com"/>
+
+      <label>Phone</label>
+      <input id="phone" placeholder="e.g., 555-123-4567"/>
+
+      <label>Order type</label>
+      <select id="orderType">
+        <option value="pickup">Pickup</option>
+        <option value="delivery">Delivery</option>
+      </select>
+
+      <div id="addressBlock" style="display:none;">
+        <label>Street address</label>
+        <input id="street" placeholder="123 Main St"/>
+
+        <div class="row">
+          <div>
+            <label>City</label>
+            <input id="city" placeholder="Denver"/>
+          </div>
+          <div>
+            <label>State</label>
+            <input id="state" placeholder="CO"/>
+          </div>
+        </div>
+
+        <label>Postal code</label>
+        <input id="postal" placeholder="80202"/>
+      </div>
+
+      <label>Notes</label>
+      <textarea id="notes" placeholder="e.g., ring doorbell, cut in squares…"></textarea>
+
+      <p class="muted" id="formMsg"></p>
+    </div>
+
+    <!-- RIGHT: MOCK PAYMENT + REVIEW -->
+    <div class="card">
+      <h2>💳 Mock Payment</h2>
+      <p class="muted">Choose a payment method for the demo.</p>
+
+      <label>Payment method</label>
+      <select id="payMethod">
+        <option value="card">Credit / Debit (mock)</option>
+        <option value="cash">Cash</option>
+        <option value="giftcard">Gift Card (mock)</option>
+      </select>
+
+      <div id="cardBlock">
+        <label>Card number</label>
+        <input id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19"/>
+
+        <div class="row">
+          <div>
+            <label>Exp</label>
+            <input id="exp" placeholder="12/30" maxlength="5"/>
+          </div>
+          <div>
+            <label>CVV</label>
+            <input id="cvv" placeholder="123" maxlength="4"/>
+          </div>
+        </div>
+
+        <label>Name on card</label>
+        <input id="cardName" placeholder="First name Last name"/>
+      </div>
+
+      <div id="giftBlock" style="display:none;">
+        <label>Gift card code</label>
+        <input id="giftCode" placeholder="CHEESY-COMET-2026"/>
+      </div>
+
+      <hr style="border-color: rgba(255,255,255,.12); margin: 16px 0;"/>
+
+      <h2>🧾 Order review</h2>
+
+      <div id="reviewList" class="items" style="margin-top:10px;"></div>
+
+      <div class="kv"><span>Items</span><b id="reviewItems">…</b></div>
+      <div class="kv"><span>Subtotal</span><b id="reviewSubtotal">…</b></div>
+      <div class="kv"><span>Tax</span><b id="reviewTax">…</b></div>
+      <div class="kv"><span>Total</span><b id="reviewTotal">…</b></div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top: 12px;">
+        <a class="btn" href="/cart.html">Back to cart</a>
+        <button class="btn primary" id="placeOrderBtn" type="button">Place order</button>
+      </div>
+
+      <p class="muted" id="payMsg"></p>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let cartId = null;
+const $ = (id) => document.getElementById(id);
+
+function setVisible(el, show) {
+  el.style.display = show ? "" : "none";
+}
+
+function isEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim());
+}
+
+function digitsOnly(s) {
+  return String(s || "").replace(/\D/g, "");
+}
+
+function updateOrderTypeUI() {
+  setVisible($("addressBlock"), $("orderType").value === "delivery");
+}
+
+function updatePaymentUI() {
+  const m = $("payMethod").value;
+  setVisible($("cardBlock"), m === "card");
+  setVisible($("giftBlock"), m === "giftcard");
+}
+
+async function loadReview() {
+  const data = await API.getCart(cartId);
+  const items = data.cart?.items || [];
+  const totals = data.totals || {};
+  const subtotalFromItems = items.reduce((sum, it) => sum + (it.line_total ?? ((it.unit_price ?? 0) * (it.qty ?? 1))), 0);
+
+  // itemized list
+  const list = $("reviewList");
+  if (list) {
+    list.innerHTML = items.length ? items.map((it) => {
+      const qty = it.qty ?? 1;
+      const label = it.kind === "drink"
+        ? `🥤 ${String(it.drink || "").replaceAll("_"," ")}`
+        : `🍕 ${String(it.name || "Pizza")}`;
+      const unit = it.unit_price ?? 0;
+      const lineTotal = it.line_total ?? (unit * qty);
+      return `<div class="item"><b>${label}</b>
+        <div class="muted">Qty: ${qty} • Unit: ${dollars(unit)} • Item Total: <b>${dollars(lineTotal)}</b></div></div>`;
+    }).join("") : `<p class="muted">No items in cart.</p>`;
+  }
+
+  $("reviewItems").textContent = items.reduce((a, it) => a + (it.qty ?? 1), 0);
+  $("reviewSubtotal").textContent = dollars(subtotalFromItems);
+  $("reviewTax").textContent = dollars(totals.tax ?? 0);
+  $("reviewTotal").textContent = dollars((totals.total ?? 0) || (subtotalFromItems + (totals.tax ?? 0)));
+
+  $("placeOrderBtn").disabled = items.length === 0;
+  $("payMsg").textContent = items.length === 0 ? "Your cart is empty. Add items before checking out." : "";
+}
+
+function buildPayload() {
+  $("formMsg").textContent = "";
+  $("payMsg").textContent = "";
+
+  const fullName = $("fullName").value.trim();
+  const email = $("email").value.trim();
+  const phone = $("phone").value.trim();
+  const orderType = $("orderType").value;
+  const notes = $("notes").value.trim();
+
+  if (!fullName) { $("formMsg").textContent = "Please enter your full name."; return null; }
+  if (!email || !isEmail(email)) { $("formMsg").textContent = "Please enter a valid email."; return null; }
+  if (!phone) { $("formMsg").textContent = "Please enter a phone number."; return null; }
+
+  let address_line1 = "";
+  let city = "";
+  let state = "";
+  let postal_code = "";
+
+  if (orderType === "delivery") {
+    address_line1 = $("street").value.trim();
+    city = $("city").value.trim();
+    state = $("state").value.trim();
+    postal_code = $("postal").value.trim();
+
+    if (!address_line1 || !city || !state || !postal_code) {
+      $("formMsg").textContent = "Delivery requires a full address (street, city, state, postal code).";
+      return null;
+    }
+  } else {
+    address_line1 = "Pickup";
+    city = "Pickup";
+    state = "NA";
+    postal_code = "00000";
+  }
+
+  const method = $("payMethod").value;
+      let payment = { method };
+
+  if (method === "card") {
+    const card_number = digitsOnly($("cardNumber").value);
+    const exp = $("exp").value.trim();
+    const cvv = digitsOnly($("cvv").value);
+    const zip_code = postal_code;
+
+    if (card_number.length < 12) { $("payMsg").textContent = "Card number looks too short."; return null; }
+    if (!exp || !exp.includes("/")) { $("payMsg").textContent = "Exp must be like 12/30."; return null; }
+    if (cvv.length < 3) { $("payMsg").textContent = "CVV must be 3–4 digits."; return null; }
+
+    const [mmRaw, yyRaw] = exp.split("/");
+    const exp_month = parseInt(mmRaw, 10);
+    let exp_year = parseInt(yyRaw, 10);
+    if (!exp_month || exp_month < 1 || exp_month > 12) { $("payMsg").textContent = "Exp month must be 01–12."; return null; }
+    if (!exp_year) { $("payMsg").textContent = "Exp year is invalid."; return null; }
+    if (exp_year < 100) exp_year = 2000 + exp_year;
+
+    payment = { method: "card", card_number, exp_month, exp_year, cvv, zip_code };
+  }
+
+  if (method === "giftcard") {
+    const code = $("giftCode").value.trim();
+    if (!code) { $("payMsg").textContent = "Enter a gift card code."; return null; }
+    payment = { method: "giftcard", code };
+  }
+
+  return {
+    customer: {
+      full_name: fullName,
+      email,
+      phone,
+      address_line1,
+      city,
+      state,
+      postal_code,
+    },
+    payment,
+    order_type: orderType,
+    notes,
+  };
+}
+
+(async () => {
+  cartId = await ensureCart();
+
+  $("orderType").addEventListener("change", updateOrderTypeUI);
+  $("payMethod").addEventListener("change", updatePaymentUI);
+
+  updateOrderTypeUI();
+  updatePaymentUI();
+  await loadReview();
+
+  $("placeOrderBtn").addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    $("payMsg").textContent = "";
+    const payload = buildPayload();
+    if (!payload) return;
+
+    const btn = $("placeOrderBtn");
+    btn.disabled = true;
+    btn.textContent = "Placing…";
+
+    try {
+      const result = await API.placeOrder(cartId, payload);
+
+      localStorage.setItem("last_order", JSON.stringify({
+        placed_at: new Date().toISOString(),
+        cart_id: cartId,
+        payload,
+        result
+      }));
+
+      try { await API.clearCart(cartId); } catch {}
+
+      window.location.assign("/confirmation.html");
+    } catch (err) {
+      console.error(err);
+      $("payMsg").textContent = String(err?.message || err);
+      btn.disabled = false;
+      btn.textContent = "Place order";
+    }
+  });
+})();
+</script>
+</body>
+</html>

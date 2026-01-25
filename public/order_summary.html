@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Order Summary • Cheesy Comet Pizzeria</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+  <div class="brand">☄️🧀 Cheesy Comet Pizzeria</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/customize.html">Customize</a>
+    <a href="/cart.html">Cart / Checkout</a>
+  </div>
+</div>
+
+
+  <div class="card">
+    <h2>🎉 Order placed</h2>
+    <p class="muted">Thanks for your order.</p>
+
+    <div id="summary"></div>
+
+    <div style="margin-top:16px;">
+      <a class="btn" href="/">Back to home</a>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const host = $("summary");
+
+const raw = localStorage.getItem("last_order");
+if (!raw) {
+  host.textContent = "No order found.";
+} else {
+  const order = JSON.parse(raw);
+  const payload = order.payload || {};
+  const result = order.result || {};
+  const summary = result.order_summary || result.order || null;
+
+  // decline path
+  if (result.ok === false) {
+    host.innerHTML = `
+      <div class="pill">Status: Declined</div>
+      <h3>Reason</h3>
+      <p>${String(result.payment?.reason || result.message || "Payment declined")}</p>
+      <div style="margin-top:12px;">
+        <a class="btn primary" href="/checkout.html">Back to checkout</a>
+      </div>
+    `;
+    throw new Error("declined");
+  }
+
+  const customer = summary?.customer || payload.customer || {};
+  const payment = summary?.payment || payload.payment || {};
+  const totals = summary?.totals || null;
+  const items = summary?.items || null;
+  const orderId = summary?.order_id || "";
+
+  let itemsHtml = "";
+  if (Array.isArray(items) && items.length) {
+    itemsHtml = `
+      <h3>Items</h3>
+      <div class="items">
+        ${items.map((it) => {
+          const qty = it.qty ?? 1;
+          const label = it.kind === "drink"
+            ? `🥤 ${String(it.drink || "").replaceAll("_"," ")}`
+            : `🍕 ${String(it.name || "Pizza")}`;
+
+          let details = "";
+          if (it.kind === "pizza" && it.customization) {
+            const c = it.customization;
+            const tops = Array.isArray(c.toppings) && c.toppings.length ? c.toppings.join(", ").replaceAll("_"," ") : "no toppings";
+            details = `${String(c.size || "").replaceAll("_"," ")} • ${String(c.crust || "").replaceAll("_"," ")} • ${String(c.sauce || "")} • ${String(c.cheese || "")}<br/>
+              <span class="muted">Bake: ${String(c.bake || "normal").replaceAll("_"," ")} • Cut: ${String(c.cut || "pie").replaceAll("_"," ")} • Crust: ${String(c.crust_flavor || "none").replaceAll("_"," ")} • Drizzle: ${String(c.drizzle || "none").replaceAll("_"," ")}</span><br/>
+              <span class="muted">Toppings: ${tops}</span>`;
+          }
+
+          const unit = it.unit_price ?? 0;
+          const lineTotal = it.line_total ?? (unit * qty);
+          return `<div class="item"><b>${label}</b>
+            <div class="muted">Qty: ${qty}</div>
+            <div class="muted">Unit: ${dollars(unit)} • Item Total: <b>${dollars(lineTotal)}</b></div>
+            <div style="margin-top:6px;">${details}</div></div>`;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  let totalsHtml = "";
+  if (totals) {
+    totalsHtml = `
+      <h3>Totals</h3>
+      <div class="kv"><span>Subtotal</span><b>${dollars(totals.subtotal ?? 0)}</b></div>
+      <div class="kv"><span>Tax</span><b>${dollars(totals.tax ?? 0)}</b></div>
+      <div class="kv"><span>Total</span><b>${dollars(totals.total ?? 0)}</b></div>
+    `;
+  }
+
+  host.innerHTML = `
+    ${orderId ? `<div class="pill">Order ID: ${orderId}</div>` : ""}
+
+    <h3>Customer</h3>
+    <p>
+      <b>${customer.full_name || ""}</b><br/>
+      ${customer.email || ""}<br/>
+      ${customer.phone || ""}
+    </p>
+
+    <h3>Delivery</h3>
+    <p>
+      ${customer.address_line1 || ""}<br/>
+      ${customer.city || ""}${customer.city ? "," : ""} ${customer.state || ""} ${customer.postal_code || ""}
+    </p>
+
+    <h3>Payment</h3>
+    <p>Method: ${payment.method || ""}</p>
+
+    ${itemsHtml}
+    ${totalsHtml}
+  `;
+}
+</script>
+</body>
+</html>

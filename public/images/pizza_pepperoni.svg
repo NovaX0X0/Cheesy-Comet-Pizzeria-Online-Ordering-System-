@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+<rect width="600" height="400" rx="24" fill="#111a2e"/>
+<circle cx="300" cy="200" r="145" fill="#f2b55b"/>
+<circle cx="300" cy="200" r="125" fill="#f8d07a"/>
+<circle cx="300" cy="200" r="112" fill="#e85b5b" opacity="0.88"/>
+<text x="24" y="52" fill="#e8eefc" font-family="Arial" font-size="28" font-weight="700">Pepperoni Classic</text>
+<circle cx="250" cy="160" r="20" fill="#b2182b" opacity="0.95"/>
+<circle cx="330" cy="150" r="18" fill="#b2182b" opacity="0.95"/>
+<circle cx="360" cy="215" r="22" fill="#b2182b" opacity="0.95"/>
+<circle cx="280" cy="245" r="19" fill="#b2182b" opacity="0.95"/>
+<circle cx="235" cy="230" r="16" fill="#b2182b" opacity="0.95"/>
+<circle cx="310" cy="205" r="17" fill="#b2182b" opacity="0.95"/>
+</svg>

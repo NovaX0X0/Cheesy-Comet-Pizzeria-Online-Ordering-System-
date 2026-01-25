@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Confirmation • Cheesy Comet Pizzeria</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <div class="brand">☄️🧀 Cheesy Comet Pizzeria</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/customize.html">Customize</a>
+      <a href="/cart.html">Cart / Checkout</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="title">✅ Order confirmation</h2>
+    <p class="muted" id="subtitle">Review your confirmation details below.</p>
+
+    <div id="content"></div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+      <a class="btn primary" href="/customize.html">Start a new order</a>
+      <a class="btn" href="/order_summary.html">View receipt</a>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const host = $("content");
+
+function safe(v){ return String(v ?? ""); }
+
+function render() {
+  const raw = localStorage.getItem("last_order");
+  if (!raw) {
+    $("title").textContent = "No order found";
+    $("subtitle").textContent = "We couldn't find a recent order on this device.";
+    host.innerHTML = `<p class="muted">Go back to <a href="/cart.html">cart</a> and place an order.</p>`;
+    return;
+  }
+
+  const saved = JSON.parse(raw);
+  const result = saved.result || {};
+  const summary = result.order_summary || result.order || result.summary || null;
+
+  // Payment decline path (API returns ok:false)
+  if (result.ok === false) {
+    $("title").textContent = "⚠️ Payment declined";
+    $("subtitle").textContent = safe(result.message || "Your payment was not approved in this demo.");
+
+    const reason = result.payment?.reason ? `<div class="pill">Reason: ${safe(result.payment.reason)}</div>` : "";
+    host.innerHTML = `
+      ${reason}
+      <p class="muted" style="margin-top:12px;">You can go back and try again with a different payment method.</p>
+      <div style="margin-top:14px;">
+        <a class="btn primary" href="/checkout.html">Back to checkout</a>
+      </div>
+    `;
+    return;
+  }
+
+  if (!summary) {
+    $("title").textContent = "✅ Order confirmed";
+    $("subtitle").textContent = "Your order was submitted.";
+    host.innerHTML = `<p class="muted">Open the receipt to view details.</p>`;
+    return;
+  }
+
+  const orderId = summary.order_id || "";
+  const created = summary.created_at_utc || "";
+  const customer = summary.customer || {};
+  const totals = summary.totals || {};
+  const payment = summary.payment || {};
+
+  host.innerHTML = `
+    ${orderId ? `<div class="pill">Order ID: ${safe(orderId)}</div>` : ""}
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="card" style="background: rgba(15,23,48,.55); box-shadow:none;">
+        <h3 style="margin:0 0 6px;">Customer</h3>
+        <p style="margin:0;">
+          <b>${safe(customer.full_name)}</b><br/>
+          ${safe(customer.email)}<br/>
+          ${safe(customer.phone)}
+        </p>
+      </div>
+
+      <div class="card" style="background: rgba(15,23,48,.55); box-shadow:none;">
+        <h3 style="margin:0 0 6px;">Totals</h3>
+        <div class="kv"><span>Subtotal</span><b>${dollars(totals.subtotal ?? 0)}</b></div>
+        <div class="kv"><span>Tax</span><b>${dollars(totals.tax ?? 0)}</b></div>
+        <div class="kv"><span>Total</span><b>${dollars(totals.total ?? 0)}</b></div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="card" style="background: rgba(15,23,48,.55); box-shadow:none;">
+        <h3 style="margin:0 0 6px;">Delivery / Pickup</h3>
+        <p style="margin:0;">
+          ${safe(customer.address_line1)}<br/>
+          ${safe(customer.city)}${customer.city ? "," : ""} ${safe(customer.state)} ${safe(customer.postal_code)}
+        </p>
+      </div>
+
+      <div class="card" style="background: rgba(15,23,48,.55); box-shadow:none;">
+        <h3 style="margin:0 0 6px;">Payment</h3>
+        <p style="margin:0;">Method: <b>${safe(payment.method || "card")}</b>${payment.card_last4 ? ` • •••• ${safe(payment.card_last4)}` : ""}</p>
+        ${created ? `<p class="muted" style="margin:8px 0 0;">Placed: ${safe(created)}</p>` : ""}
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:12px;">This is a mock confirmation page for the demo workflow.</p>
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
