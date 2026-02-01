@@ -403,6 +403,17 @@ async function addPresetToCart(preset) {
 
   $("addPizzaBtn").addEventListener("click", async () => {
     $("pizzaMsg").textContent = "";
+
+    const qty = parseInt($("pizzaQty").value, 10);
+    if (isNaN(qty) || qty < 1) {
+        $("pizzaMsg").textContent = "❌ Please enter a quantity of at least 1.";
+        return;
+    }
+    if (qty > 20) {
+        $("pizzaMsg").textContent = "❌ Maximum 20 pizzas per item.";
+        return;
+    }
+
     try {
       const body = {
         kind: "pizza",
@@ -433,6 +444,17 @@ async function addPresetToCart(preset) {
 
   $("addDrinkBtn").addEventListener("click", async () => {
     $("drinkMsg").textContent = "";
+
+    const qty = parseInt($("drinkQty").value, 10);
+    if (isNaN(qty) || qty < 1) {
+        $("drinkMsg").textContent = "❌ Please enter at least 1 drink.";
+        return;
+    }
+    if (qty > 20) {
+        $("drinkMsg").textContent = "❌ Maximum 20 drinks per item.";
+        return;
+    }
+    
     try {
       const body = {
         kind: "drink",
